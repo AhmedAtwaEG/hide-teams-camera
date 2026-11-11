@@ -1,0 +1,4 @@
+.DS_Store
+# Your own list of names stays on this machine.
+desktop/names.txt
+node_modules/

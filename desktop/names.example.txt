@@ -1,0 +1,7 @@
+# Names whose camera to hide in the Teams desktop app, one per line.
+# Same rules as the Chrome extension popup:
+#   Sam          hides everyone whose name contains "sam"
+#   "Sam Lee"    hides only the person named exactly "Sam Lee"
+# A line with just: off   turns hiding off without deleting the names.
+# Changes apply immediately, even during a call.
+

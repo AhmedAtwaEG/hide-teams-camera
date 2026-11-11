@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Hide Teams Camera</title>
+  <style>
+    body { width: 280px; margin: 0; padding: 14px; font: 13px/1.4 system-ui, sans-serif; color: #1f1f1f; background: #fff; }
+    h1 { font-size: 14px; margin: 0 0 8px; }
+    label { display: block; margin-bottom: 4px; }
+    textarea { width: 100%; height: 84px; box-sizing: border-box; padding: 6px; font: inherit; border: 1px solid #c8c8c8; border-radius: 6px; resize: vertical; }
+    .row { display: flex; align-items: center; gap: 6px; margin: 10px 0; }
+    button { padding: 6px 14px; font: inherit; color: #fff; background: #5b5fc7; border: 0; border-radius: 6px; cursor: pointer; }
+    #status { margin-left: 8px; color: #107c10; }
+    p { margin: 8px 0 0; color: #616161; font-size: 12px; }
+    @media (prefers-color-scheme: dark) {
+      body { color: #f0f0f0; background: #1f1f1f; }
+      textarea { color: #f0f0f0; background: #2b2b2b; border-color: #555; }
+      p { color: #adadad; }
+      #status { color: #6ccb5f; }
+    }
+  </style>
+</head>
+<body>
+  <h1>Hide Teams Camera</h1>
+  <label for="names">Names to hide, one per line</label>
+  <textarea id="names" placeholder="Name as shown on their video tile"></textarea>
+  <div class="row">
+    <input type="checkbox" id="enabled">
+    <label for="enabled" style="margin:0">Hiding is on</label>
+  </div>
+  <button id="save">Save</button><span id="status"></span>
+  <p>Part of a name is enough, and hides everyone whose name contains it. Put a name in "quotes" to match it exactly.</p>
+  <p>Only your screen changes, and only in Teams in this browser.</p>
+  <script src="popup.js"></script>
+</body>
+</html>
