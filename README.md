@@ -97,7 +97,10 @@ cd hide-their-camera/desktop
 
 Then quit Teams (Cmd+Q) and open it again once. Put names in `desktop/names.txt`, which `install.sh` creates from `names.example.txt` and git ignores (same rules as the popup; a line `off` turns it off). Saving the file applies within a second, even mid-call. Log: `~/Library/Logs/hide-teams-camera.log`. Remove with `./uninstall.sh`, then restart Teams.
 
-If Teams is running without the port for 30 s (for example it started at login before the agent set the variable), the injector posts a macOS notification asking you to quit and reopen Teams; until then cameras are **not** hidden.
+If Teams is running without the port, cameras are **not** hidden. That happens after a reboot: Teams auto-starts before the agent has set the variable. The injector handles it:
+
+- Teams started less than 2 minutes ago: it quits and reopens Teams with the port, silently (at most once per 10 minutes, so it can't loop).
+- Teams has been running longer: it shows a "Restart Teams" dialog, because restarting would drop a call you're in.
 
 What did not work: starting `MSTeams` directly from a shell (it quits and relaunches itself through LaunchServices, dropping the variable) and Teams' own `--remote-debugging-port` flag (not passed to the WebView). `open -a "Microsoft Teams" --env WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=...` and `launchctl setenv` both work.
 
@@ -115,10 +118,10 @@ While the variable is set, Teams' WebView accepts DevTools connections on `127.0
 - Hidden guest shares their screen: the share stays visible. The share is its own tile with the sharer's name in `data-tid` and `data-stream-type="ScreenSharing"`; it was marked hidden until `content.js` was changed to mark only camera tiles (this would have hidden their share in Chrome, where it is a `<video>`).
 - Writing `off` into `names.txt` mid-call shows the video again; removing it hides it again within about 2 s.
 - New meeting windows are picked up after they open. (An earlier version paused new windows until attached and froze the meeting window, "Debugger paused in another tab"; it now never pauses.)
-- Injector started while Teams runs without the port: logs and posts the warning after 30 s.
+- After a real reboot (2026-11-12) Teams auto-started a minute before the agent and ran without the port; the old notification-only warning went unnoticed. Now: a Teams started without the port is restarted once, about 14 s after launch, and hides cameras again about 18 s after launch; an older one gets the dialog, and choosing **Restart Teams** fixes it.
 - Teams quit (Cmd+Q) and reopened from the Dock with the agent installed: the WebView came up with the port, and the agent reconnected and injected within about 6 s with no manual step.
 
-Not tested yet on desktop: Teams updating itself mid-session, the login-time race after a reboot, and Together mode / large gallery.
+Not tested yet on desktop: Teams updating itself mid-session, and Together mode / large gallery. The login fix was tested by launching Teams with the variable emptied, not yet through another reboot.
 
 ## License
 

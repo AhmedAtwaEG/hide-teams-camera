@@ -193,44 +193,94 @@ async function run() {
   log('disconnected');
 }
 
-// Teams running without the port (e.g. it started at login before the launch agent set the
-// variable) means cameras are NOT being hidden. Say so once, visibly.
-function teamsRunning() {
+// Teams running without the port means cameras are NOT being hidden. It happens at login:
+// Teams auto-starts before this agent has set the variable (seen 2026-11-12 after a reboot).
+//  - Teams started less than 2 minutes ago: restart it silently. Nobody is in a call yet.
+//  - Otherwise: ask with a dialog, because restarting would drop a call.
+// Each Teams process is handled once, and silent restarts are rate-limited so a Teams that
+// never opens the port (e.g. a future update ignoring the variable) can't loop.
+const SETTLE_MS = 10000; // the port normally opens about 5 s after Teams starts
+const YOUNG_S = 120;
+
+function teamsPid() {
   try {
-    execFileSync('pgrep', ['-x', 'MSTeams'], { stdio: 'ignore' });
-    return true;
+    return execFileSync('pgrep', ['-x', 'MSTeams']).toString().trim().split('\n')[0] || null;
   } catch {
-    return false;
+    return null;
   }
 }
-function warnUnprotected() {
-  const msg = 'Teams is running without hide-camera support. Quit Teams (Cmd+Q) and open it again.';
-  log(msg);
-  execFile('osascript', ['-e', `display notification "${msg}" with title "Hide Their Camera"`], () => {});
+function ageSeconds(pid) {
+  try {
+    const etime = execFileSync('ps', ['-o', 'etime=', '-p', pid]).toString().trim(); // [[dd-]hh:]mm:ss
+    const [days, hms] = etime.includes('-') ? etime.split('-') : ['0', etime];
+    return Number(days) * 86400 + hms.split(':').map(Number).reduce((total, n) => total * 60 + n, 0);
+  } catch {
+    return Infinity;
+  }
+}
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+let restarting = false;
+async function restartTeams(reason) {
+  if (restarting) return;
+  restarting = true;
+  log(`restarting Teams: ${reason}`);
+  try {
+    await new Promise((r) => execFile('osascript', ['-e', 'tell application "Microsoft Teams" to quit'], { timeout: 20000 }, r));
+    for (let i = 0; i < 40 && teamsPid(); i++) await sleep(500);
+    if (teamsPid()) {
+      log('Teams did not quit; leaving it running');
+      return;
+    }
+    await sleep(1500);
+    execFileSync('open', ['-a', 'Microsoft Teams', '--env', `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--remote-debugging-port=${PORT}`]);
+  } finally {
+    restarting = false;
+  }
+}
+function askToRestart() {
+  const msg = 'Teams is running without Hide Their Camera, so cameras are not being hidden. Restart Teams now? This leaves any call you are in.';
+  log('asking to restart Teams');
+  const script = `display dialog "${msg}" with title "Hide Their Camera" buttons {"Later", "Restart Teams"} default button "Restart Teams" with icon caution giving up after 600`;
+  execFile('osascript', ['-e', script], (err, stdout) => {
+    if (!err && /Restart Teams/.test(stdout)) restartTeams('chosen in dialog');
+    else log('restart declined or dialog timed out');
+  });
 }
 
 let waitingLogged = false;
 let unprotectedSince = 0;
-let warned = false;
+let unprotectedPid = null;
+let handledPid = null;
+let lastSilentRestart = 0;
 for (;;) {
   try {
     await run();
     waitingLogged = false;
     unprotectedSince = 0;
-    warned = false;
   } catch (err) {
     if (!waitingLogged) log(`waiting for Teams on port ${PORT} (${err.cause?.code || err.message})`);
     waitingLogged = true;
-    if (!teamsRunning()) {
+    const pid = teamsPid();
+    // The timer is per Teams process: a just-restarted Teams gets its own SETTLE_MS to open
+    // the port. (Sharing it with the old process restarted Teams twice in a row.)
+    if (!pid || restarting) {
       unprotectedSince = 0;
-      warned = false;
-    } else if (!unprotectedSince) {
+      unprotectedPid = null;
+    } else if (pid !== unprotectedPid) {
+      unprotectedPid = pid;
       unprotectedSince = Date.now();
-    } else if (!warned && !ONCE && Date.now() - unprotectedSince > 30000) {
-      warnUnprotected();
-      warned = true;
+    } else if (!ONCE && pid !== handledPid && Date.now() - unprotectedSince > SETTLE_MS) {
+      handledPid = pid;
+      const age = ageSeconds(pid);
+      if (age < YOUNG_S && Date.now() - lastSilentRestart > 10 * 60000) {
+        lastSilentRestart = Date.now();
+        await restartTeams(`started ${age}s ago without the port`);
+      } else {
+        askToRestart();
+      }
+      unprotectedSince = 0;
     }
   }
   if (ONCE) break;
-  await new Promise((r) => setTimeout(r, 3000));
+  await sleep(3000);
 }
