@@ -206,7 +206,7 @@ function teamsRunning() {
 function warnUnprotected() {
   const msg = 'Teams is running without hide-camera support. Quit Teams (Cmd+Q) and open it again.';
   log(msg);
-  execFile('osascript', ['-e', `display notification "${msg}" with title "Hide Teams Camera"`], () => {});
+  execFile('osascript', ['-e', `display notification "${msg}" with title "Hide Their Camera"`], () => {});
 }
 
 let waitingLogged = false;

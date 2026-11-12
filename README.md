@@ -1,4 +1,4 @@
-# Hide Teams Camera
+# Hide Their Camera
 
 Hide chosen people's camera video in Microsoft Teams meetings, on your screen only. Nobody else's view changes, and the person is not notified. Teams itself can only turn off *all* incoming video.
 
@@ -22,7 +22,7 @@ You can still right-click a hidden person's tile to pin them. Screen-share tiles
 ## Install
 
 ```sh
-git clone https://github.com/AhmedAtwaEG/hide-teams-camera.git
+git clone https://github.com/AhmedAtwaEG/hide-their-camera.git
 ```
 
 `chrome://extensions` → turn on **Developer mode** → **Load unpacked** → pick the cloned folder. Chrome loads the extension from this folder, so don't move or delete it. After editing a file, press the reload arrow on the extension's card.
@@ -91,7 +91,7 @@ New Teams for Mac (`com.microsoft.teams2`) is not Electron: it is a native shell
 Needs Node.js 22 or newer.
 
 ```sh
-cd hide-teams-camera/desktop
+cd hide-their-camera/desktop
 ./install.sh        # launch agent: runs inject.mjs at login, sets the WebView2 variable
 ```
 
